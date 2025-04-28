@@ -56,6 +56,8 @@ export default class Game extends Phaser.Scene {
       frameRate: 20,
     });
 
+    this.restartKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.R);
+
     this.anims.create({
       key: "right",
       frames: this.anims.generateFrameNumbers("dude", { start: 5, end: 8 }),
@@ -80,14 +82,37 @@ export default class Game extends Phaser.Scene {
     this.score = 0;
     this.gameOver = false;
 
-    this.scoreText = this.add.text(16, 16, `Score: ${this.score}`, {
+    this.scoreText = this.add.text(16, 16, `Puntos: ${this.score}`, {
       fontSize: "32px",
       fill: "#000",
     });
 
+    this.timeLeft = 30;
+    this.timerText = this.add.text(750, 16, `Tiempo: ${this.timeLeft}`, {
+     fontSize: '32px',
+     fill: '#000'
+    });
+    this.timerText.setOrigin(1, 0);
+
+    this.timer = this.time.addEvent({
+     delay: 1000,
+     callback: this.updateTimer,
+     callbackScope: this,
+     loop: true
+    });
+
+    this.gameOverText = this.add.text (400, 300, 'GAME OVER', {
+      fontSize: '64px',
+      fill: '#ff0000'
+    });
+    this.gameOverText.setOrigin(0.5);
+    this.gameOverText.setVisible(false);
+
     this.physics.add.collider(this.player, this.platforms);
 
     this.physics.add.collider(this.stars, this.platforms);
+    
+    this.physics.add.collider(this.bombs, this.platforms);
 
     this.physics.add.overlap(
       this.player,
@@ -125,19 +150,40 @@ export default class Game extends Phaser.Scene {
     if (this.cursors.up.isDown && this.player.body.touching.down) {
       this.player.setVelocityY(-330);
     }
+
+    if (this.restartKey.isDown) {
+      this.scene.restart();
+    }
+  }
+
+  updateTimer() {
+    if (!this.gameOver) {
+      this.timeLeft -= 1;
+      this.timerText.setText(`Tiempo: ${this.timeLeft}`);
+      if (this.timeLeft <= 0) {
+        this.physics.pause();
+        this.player.setTint(0xff0000);
+        this.player.anims.play('turn');
+        this.gameOver = true;
+        this.gameOverText.setVisible(true);
+      }
+    }
   }
 
   collectStar(player, star) {
     star.disableBody(true, true);
 
     this.score += 10;
-    this.scoreText.setText(`Score: ${this.score}`);
+    this.scoreText.setText(`Puntos: ${this.score}`);
 
     if (this.stars.countActive(true) === 0) {
       //  A new batch of stars to collect
       this.stars.children.iterate(function (child) {
         child.enableBody(true, child.x, 0, true, true);
       });
+
+      this.timeLeft = 30;
+      this.timerText.setText(`Tiempo: ${this.timeLeft}`);
 
       var x =
         this.player.x < 400
@@ -160,5 +206,7 @@ export default class Game extends Phaser.Scene {
     this.player.anims.play("turn");
 
     this.gameOver = true;
+
+    this.gameOverText.setVisible(true);
   }
 }
